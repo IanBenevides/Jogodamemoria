@@ -75,7 +75,7 @@
 
     <!-- Tabuleiro do Jogo -->
     <div id="game-board" class="grid grid-cols-3 sm:grid-cols-4 gap-3 md:gap-4 w-full max-w-2xl">
-        <!-- Cards serão gerados pelo JavaScript -->
+        <!-- Cards são gerados aqui -->
     </div>
 
     <!-- Modal de Vitória -->
@@ -83,7 +83,7 @@
         <div class="bg-gray-800 rounded-lg shadow-2xl p-8 text-center transform scale-95 transition-transform duration-300">
             <h2 class="text-3xl font-bold text-emerald-400 mb-4">Parabéns!</h2>
             <p class="text-lg text-gray-200 mb-2">Você dominou os conceitos!</p>
-            <p id="final-stats" class="text-gray-300 mb-6">Você completou em <span class="font-bold text-indigo-400">X</span> tentativas.</p>
+            <p id="final-stats" class="text-gray-300 mb-6"></p>
             <button id="play-again-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-5 rounded-lg transition-colors duration-300">
                 Jogar Novamente
             </button>
@@ -92,7 +92,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- ELEMENTOS DO DOM ---
         const gameBoard = document.getElementById('game-board');
         const movesCounter = document.getElementById('moves-counter');
         const resetButton = document.getElementById('reset-button');
@@ -100,7 +99,6 @@
         const playAgainButton = document.getElementById('play-again-button');
         const finalStats = document.getElementById('final-stats');
 
-        // --- DADOS DO JOGO (ADAPTADO PARA A OFICINA) ---
         const cardData = [
             { id: 1, content: 'LibreOffice', pairId: 1 }, { id: 2, content: 'Pacote de Escritório', pairId: 1 },
             { id: 3, content: 'GIMP', pairId: 2 }, { id: 4, content: 'Editor de Imagens', pairId: 2 },
@@ -110,19 +108,13 @@
             { id: 11, content: 'Segurança Digital', pairId: 6 }, { id: 12, content: 'Proteger Seus Dados', pairId: 6 },
         ];
 
-        // --- ESTADO DO JOGO ---
-        let hasFlippedCard = false;
-        let lockBoard = false;
         let firstCard, secondCard;
+        let hasFlippedCard = false;
+        let lockBoard = false; // Trava o tabuleiro para evitar cliques extras durante a animação
         let moves = 0;
         let matchedPairs = 0;
 
-        // --- FUNÇÕES ---
-
-        /**
-         * Embaralha um array usando o algoritmo Fisher-Yates.
-         * @param {Array} array - O array a ser embaralhado.
-         */
+        // Embaralha os cards usando o algoritmo Fisher-Yates
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -130,11 +122,8 @@
             }
         }
 
-        /**
-         * Cria e exibe os cards no tabuleiro.
-         */
-        function createBoard() {
-            // Reseta o estado do jogo
+        // Prepara e exibe o tabuleiro do jogo
+        function setupGame() {
             gameBoard.innerHTML = '';
             moves = 0;
             matchedPairs = 0;
@@ -144,8 +133,6 @@
             winModal.classList.add('hidden');
             winModal.children[0].classList.remove('scale-100');
 
-
-            // Embaralha e cria os elementos dos cards
             const shuffledCards = [...cardData];
             shuffle(shuffledCards);
 
@@ -157,9 +144,7 @@
                 cardElement.innerHTML = `
                     <div class="card-inner">
                         <div class="card-face card-front">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
                         </div>
                         <div class="card-face card-back">
                             <span class="text-sm sm:text-base font-semibold p-1">${cardInfo.content}</span>
@@ -171,103 +156,75 @@
             });
         }
 
-        /**
-         * Lida com o clique em um card.
-         */
+        // Lida com a lógica de virar um card
         function flipCard() {
-            if (lockBoard) return;
-            if (this === firstCard) return; // Impede duplo clique no mesmo card
+            if (lockBoard || this === firstCard) return;
 
             this.classList.add('flipped');
 
             if (!hasFlippedCard) {
-                // Primeiro clique
                 hasFlippedCard = true;
                 firstCard = this;
                 return;
             }
 
-            // Segundo clique
             secondCard = this;
-            incrementMoves();
-            checkForMatch();
-        }
-        
-        /**
-         * Incrementa o contador de tentativas.
-         */
-        function incrementMoves() {
             moves++;
             movesCounter.textContent = moves;
+            checkForMatch();
         }
 
-        /**
-         * Verifica se os dois cards virados formam um par.
-         */
+        // Checa se os dois cards virados são um par
         function checkForMatch() {
-            let isMatch = firstCard.dataset.pairId === secondCard.dataset.pairId;
-            isMatch ? disableCards() : unflipCards();
+            const isMatch = firstCard.dataset.pairId === secondCard.dataset.pairId;
+            isMatch ? disableMatchedCards() : unflipCards();
         }
 
-        /**
-         * Desabilita os cards se eles formarem um par.
-         */
-        function disableCards() {
+        // Mantém os cards virados se formarem um par
+        function disableMatchedCards() {
             firstCard.removeEventListener('click', flipCard);
             secondCard.removeEventListener('click', flipCard);
-            
             firstCard.classList.add('matched');
             secondCard.classList.add('matched');
 
             matchedPairs++;
-            resetBoard();
+            resetTurn();
             
-            // Verifica se o jogo terminou
-            if(matchedPairs === cardData.length / 2) {
-                setTimeout(showWinModal, 800);
+            if (matchedPairs === cardData.length / 2) {
+                setTimeout(showWinScreen, 700);
             }
         }
         
-        /**
-         * Mostra o modal de vitória.
-         */
-        function showWinModal() {
+        // Exibe a tela de vitória
+        function showWinScreen() {
             finalStats.innerHTML = `Você completou em <span class="font-bold text-indigo-400">${moves}</span> tentativas.`;
             winModal.classList.remove('hidden');
-            setTimeout(() => {
-                 winModal.children[0].classList.add('scale-100');
-            }, 50);
+            setTimeout(() => winModal.children[0].classList.add('scale-100'), 50);
         }
 
-        /**
-         * Vira os cards de volta se não formarem um par.
-         */
+        // Vira os cards de volta se não formarem um par
         function unflipCards() {
             lockBoard = true;
             setTimeout(() => {
                 firstCard.classList.remove('flipped');
                 secondCard.classList.remove('flipped');
-                resetBoard();
+                resetTurn();
             }, 1200);
         }
 
-        /**
-         * Reseta as variáveis do turno.
-         */
-        function resetBoard() {
+        // Reseta as variáveis do turno
+        function resetTurn() {
             [hasFlippedCard, lockBoard] = [false, false];
             [firstCard, secondCard] = [null, null];
         }
 
-        // --- EVENT LISTENERS ---
-        resetButton.addEventListener('click', createBoard);
-        playAgainButton.addEventListener('click', createBoard);
+        resetButton.addEventListener('click', setupGame);
+        playAgainButton.addEventListener('click', setupGame);
 
-        // --- INICIALIZAÇÃO ---
-        createBoard();
+        // Inicia o jogo
+        setupGame();
     });
 </script>
 
 </body>
 </html>
-
